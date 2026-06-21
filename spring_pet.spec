@@ -19,7 +19,11 @@ a = Analysis(
             "icon",
         ),
     ],
-    hiddenimports=[],
+    hiddenimports=[
+        "pycaw.pycaw",
+        "comtypes",
+        "comtypes.client",
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

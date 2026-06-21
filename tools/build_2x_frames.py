@@ -21,6 +21,8 @@ FRAME_COUNTS = {
     "sleeping": 6,
     "listening": 6,
     "noting": 6,
+    "inspect": 6,
+    "examine": 6,
 }
 SCALE = 2
 CANVAS = (192, 208)
@@ -36,6 +38,8 @@ CORE_PROFILES = {
     "heart": (0.72, 1.00),
     "listening": (0.72, 1.00),
     "noting": (0.72, 1.00),
+    "inspect": (0.70, 1.00),
+    "examine": (0.70, 1.00),
     # Mid-body anchors avoid intentional lifted legs and extended limbs.
     "failed": (0.42, 0.68),
     "running-right": (0.30, 0.62),

@@ -160,6 +160,30 @@
       "return_to": null,
       "trigger": "startup",
       "menu_order": 0
+    },
+    "inspect": {
+      "label": "系统概览",
+      "frames": 6,
+      "durations_ms": [240, 240, 280, 340, 280, 420],
+      "behavior": "once",
+      "role": "system",
+      "menu_group": null,
+      "persist": false,
+      "return_to": null,
+      "trigger": "hardware-overview",
+      "menu_order": 0
+    },
+    "examine": {
+      "label": "硬件体征",
+      "frames": 6,
+      "durations_ms": [260, 260, 300, 360, 300, 440],
+      "behavior": "once",
+      "role": "system",
+      "menu_group": null,
+      "persist": false,
+      "return_to": null,
+      "trigger": "hardware-vitals",
+      "menu_order": 0
     }
   }
 }

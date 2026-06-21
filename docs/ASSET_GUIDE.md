@@ -26,12 +26,20 @@ failed 8 frames
 waiting 6 frames 
 running 6 frames 
 review 6 frames 
+sleeping 6 frames
+heart 6 frames
+listening 6 frames
+noting 6 frames
+inspect 6 frames
+examine 6 frames
 ``` 
 Product-specific meanings: 
 ```text 
 waiting = drinking milk tea while waiting 
 running = working with a laptop 
 review = admiring herself in a hand mirror 
+inspect = examining the system with a magnifying glass
+examine = checking hardware vitals with a stethoscope
 ``` 
 These are intentional custom semantics and must not be “corrected” to the original Codex meanings. 
 ## 3. Critical invariants 

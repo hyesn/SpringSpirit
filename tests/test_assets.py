@@ -21,6 +21,7 @@ from build_2x_frames import (
     core_metrics,
     extract_slot,
 )
+from build_hardware_state_frames import connected_components
 
 
 def test_manifest_validates_all_production_frames() -> None:
@@ -42,12 +43,16 @@ def test_manifest_validates_all_production_frames() -> None:
         "heart",
         "listening",
         "noting",
+        "inspect",
+        "examine",
     }
-    assert sum(len(state.frame_paths) for state in manifest.states.values()) == 81
+    assert sum(len(state.frame_paths) for state in manifest.states.values()) == 93
     assert manifest.state_for_trigger("drag-left") == "running-left"
     assert manifest.state_for_trigger("drag-right") == "running-right"
     assert manifest.state_for_trigger("exit") == "waving"
     assert manifest.state_for_trigger("startup") == "heart"
+    assert manifest.state_for_trigger("hardware-overview") == "inspect"
+    assert manifest.state_for_trigger("hardware-vitals") == "examine"
     assert [state.name for state in manifest.menu_states("状态")] == [
         "idle",
         "waiting",
@@ -73,7 +78,14 @@ def test_new_state_frames_are_clean_and_complete() -> None:
         ("animations", (192, 208)),
         ("animations@2x", (384, 416)),
     ):
-        for state in ("heart", "sleeping", "listening", "noting"):
+        for state in (
+            "heart",
+            "sleeping",
+            "listening",
+            "noting",
+            "inspect",
+            "examine",
+        ):
             paths = sorted((ROOT / "assets" / scale_root / state).glob("*.png"))
             assert len(paths) == 6
             for path in paths:
@@ -90,6 +102,19 @@ def test_new_state_frames_are_clean_and_complete() -> None:
                         and green > blue * 1.8
                     )
                     assert greenish_visible == 0
+
+
+def test_hardware_frames_contain_one_complete_subject_without_slot_fragments() -> None:
+    for state in ("inspect", "examine"):
+        for path in sorted((ROOT / "assets" / "animations@2x" / state).glob("*.png")):
+            with Image.open(path) as image:
+                components = connected_components(image.convert("RGBA"))
+            substantial = [
+                component
+                for component in components
+                if component[4] >= image.width * image.height * 0.002
+            ]
+            assert len(substantial) == 1
 
 
 def test_jumping_keeps_low_high_low_canvas_trajectory() -> None:

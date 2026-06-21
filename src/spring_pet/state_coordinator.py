@@ -20,6 +20,7 @@ class StateCoordinator:
         self.base_state = base_state
         self.mode: str | None = None
         self._last_configured_process: str | None = None
+        self._diagnostic_state: str | None = None
 
     @property
     def is_transient(self) -> bool:
@@ -109,6 +110,15 @@ class StateCoordinator:
         self.mode = "exit"
         return self.controller.play_trigger("exit")
 
+    def play_diagnostic(self, trigger: str) -> bool:
+        state_name = self.manifest.state_for_trigger(trigger)
+        if state_name is None:
+            return False
+        self.mode = "diagnostic"
+        self._diagnostic_state = state_name
+        self.controller.set_state(state_name)
+        return True
+
     def animation_finished(self, state_name: str) -> str | None:
         expected_trigger = {
             "startup": "startup",
@@ -120,8 +130,12 @@ class StateCoordinator:
             if state_name != expected_state:
                 return None
 
+        if self.mode == "diagnostic" and state_name != self._diagnostic_state:
+            return None
+
         completed_mode = self.mode
-        if completed_mode in {"startup", "ambient", "action"}:
+        if completed_mode in {"startup", "ambient", "action", "diagnostic"}:
             self.mode = None
+            self._diagnostic_state = None
             self.controller.set_state(self.base_state)
         return completed_mode

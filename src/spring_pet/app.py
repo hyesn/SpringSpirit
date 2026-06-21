@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from .asset_loader import AssetValidationError, load_animation_manifest, resource_path
 from .foreground_monitor import ForegroundMonitor
 from .foreground_rules import ForegroundRuleError, ForegroundRuleStore
+from .hardware_monitor import HardwareCollector, HardwareMonitorService
 from .pet_window import PetWindow
 from .settings import PetSettings
 
@@ -51,11 +52,22 @@ def main(argv: list[str] | None = None) -> int:
         reconcile_interval_ms=foreground_config.reconcile_interval_ms,
     )
 
+    settings = PetSettings()
+    restored_for_hardware = settings.load(
+        default_scale=manifest.default_scale,
+        default_state=manifest.default_state,
+        persistent_states=persistent_states,
+    )
+    hardware_monitor_service = HardwareMonitorService(
+        HardwareCollector(restored_for_hardware.libre_hardware_monitor_url)
+    )
+
     window = PetWindow(
         manifest,
-        PetSettings(),
+        settings,
         foreground_rules=foreground_rules,
         foreground_monitor=foreground_monitor,
+        hardware_monitor_service=hardware_monitor_service,
     )
     app.commitDataRequest.connect(
         lambda _session_manager: window.force_exit_for_session_end()

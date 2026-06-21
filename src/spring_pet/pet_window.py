@@ -22,6 +22,8 @@ from .asset_loader import AnimationManifest
 from .autostart import AutostartError, AutostartManager
 from .foreground_monitor import ForegroundMonitor
 from .foreground_rules import ForegroundRuleError, ForegroundRuleStore
+from .hardware_bubble import HardwareStatusBubble
+from .hardware_monitor import HardwareMonitorService, HardwareSnapshot
 from .interaction import DragDirectionTracker
 from .settings import PetSettings
 from .state_coordinator import StateCoordinator
@@ -40,6 +42,7 @@ class PetWindow(QWidget):
         autostart: AutostartManager | None = None,
         foreground_rules: ForegroundRuleStore | None = None,
         foreground_monitor: ForegroundMonitor | None = None,
+        hardware_monitor_service: HardwareMonitorService | None = None,
         ambient_interval_provider: Callable[[], int] | None = None,
         parent: QWidget | None = None,
     ):
@@ -49,6 +52,7 @@ class PetWindow(QWidget):
         self.autostart = autostart or AutostartManager()
         self.foreground_rules = foreground_rules
         self.foreground_monitor = foreground_monitor
+        self.hardware_monitor_service = hardware_monitor_service
         self._drag_offset: QPoint | None = None
         self._drag_animation_active = False
         self._drag_tracker = DragDirectionTracker(threshold=4)
@@ -62,6 +66,7 @@ class PetWindow(QWidget):
         self._foreground_process: str | None = None
         self._foreground_match_label: str | None = None
         self._foreground_match_state: str | None = None
+        self._diagnostic_kind: str | None = None
         self._ambient_interval_provider = ambient_interval_provider or (
             lambda: random.SystemRandom().randint(
                 8 * 60 * 1000,
@@ -95,6 +100,9 @@ class PetWindow(QWidget):
         )
         self.scale = restored.scale
         self._foreground_follow_enabled = restored.foreground_follow_enabled
+        self.hardware_bubble = HardwareStatusBubble(
+            restored.diagnostic_bubble_timeout_ms
+        )
         self._resize_canvas()
 
         self.controller = AnimationController(manifest, self)
@@ -121,6 +129,13 @@ class PetWindow(QWidget):
                 self._on_foreground_process_changed
             )
             self.foreground_monitor.start()
+        if self.hardware_monitor_service is not None:
+            self.hardware_monitor_service.snapshot_ready.connect(
+                self._on_hardware_snapshot
+            )
+            self.hardware_monitor_service.collection_failed.connect(
+                self._on_hardware_collection_failed
+            )
         try:
             self.autostart.sync_path_if_enabled()
         except AutostartError as exc:
@@ -233,10 +248,13 @@ class PetWindow(QWidget):
         )
         if not self._source_pixmap.isNull():
             self._show_frame(self._source_pixmap)
+        if self.hardware_bubble.isVisible():
+            self.hardware_bubble.reposition()
 
     def set_animation_state(self, state_name: str) -> None:
         if not self._interaction_enabled:
             return
+        self._cancel_hardware_diagnostic()
         self.state_coordinator.select_user_state(state_name)
 
     def set_scale(self, scale: float) -> None:
@@ -254,6 +272,8 @@ class PetWindow(QWidget):
         )
         if not self._source_pixmap.isNull():
             self._show_frame(self._source_pixmap)
+        if self.hardware_bubble.isVisible():
+            self.hardware_bubble.reposition()
         self.settings.save_scale(self.scale)
         self.settings.save_position(self.pos())
 
@@ -317,6 +337,29 @@ class PetWindow(QWidget):
             autostart_action.setStatusTip(self._autostart_error)
             autostart_action.setToolTip(self._autostart_error)
         autostart_action.toggled.connect(self._set_autostart)
+
+        menu.addSeparator()
+        hardware_menu = QMenu("硬件状态感知", menu)
+        menu.addMenu(hardware_menu)
+        menu._spring_submenus.append(hardware_menu)
+        hardware_available = self.hardware_monitor_service is not None
+        hardware_busy = (
+            self.hardware_monitor_service.busy
+            if self.hardware_monitor_service is not None
+            else False
+        )
+        overview_action = hardware_menu.addAction("系统概览")
+        overview_action.setEnabled(hardware_available and not hardware_busy)
+        overview_action.triggered.connect(
+            lambda: self.request_hardware_diagnostic("overview")
+        )
+        vitals_action = hardware_menu.addAction("硬件体征")
+        vitals_action.setEnabled(hardware_available and not hardware_busy)
+        vitals_action.triggered.connect(
+            lambda: self.request_hardware_diagnostic("vitals")
+        )
+        if not hardware_available:
+            hardware_menu.setToolTip("硬件监控服务不可用")
 
         menu.addSeparator()
         follow_action = menu.addAction("跟随前台应用")
@@ -444,6 +487,46 @@ class PetWindow(QWidget):
                 force=True,
             )
 
+    def request_hardware_diagnostic(self, kind: str) -> None:
+        if (
+            not self._interaction_enabled
+            or self._exit_requested
+            or self.hardware_monitor_service is None
+        ):
+            return
+        configuration = {
+            "overview": ("hardware-overview", "系统概览"),
+            "vitals": ("hardware-vitals", "硬件体征"),
+        }
+        if kind not in configuration:
+            raise ValueError(f"Unknown hardware diagnostic: {kind}")
+        trigger, title = configuration[kind]
+        self._cancel_hardware_diagnostic()
+        self._diagnostic_kind = kind
+        if not self.state_coordinator.play_diagnostic(trigger):
+            self._diagnostic_kind = None
+            return
+        self.hardware_bubble.show_loading(title, self)
+        self.hardware_monitor_service.request(kind)
+
+    def _on_hardware_snapshot(self, snapshot: HardwareSnapshot) -> None:
+        if snapshot.kind != self._diagnostic_kind or self._exit_requested:
+            return
+        title = "系统概览" if snapshot.kind == "overview" else "硬件体征"
+        self.hardware_bubble.show_snapshot(title, snapshot, self)
+
+    def _on_hardware_collection_failed(self, message: str) -> None:
+        if self._diagnostic_kind is None or self._exit_requested:
+            return
+        title = "系统概览" if self._diagnostic_kind == "overview" else "硬件体征"
+        self.hardware_bubble.show_error(title, message, self)
+
+    def _cancel_hardware_diagnostic(self) -> None:
+        if self.hardware_monitor_service is not None:
+            self.hardware_monitor_service.cancel()
+        self._diagnostic_kind = None
+        self.hardware_bubble.hide()
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if (
             self._interaction_enabled
@@ -475,6 +558,7 @@ class PetWindow(QWidget):
         super().mouseReleaseEvent(event)
 
     def _begin_drag(self, global_position: QPoint) -> None:
+        self._cancel_hardware_diagnostic()
         self._drag_offset = global_position - self.frameGeometry().topLeft()
         self._drag_animation_active = False
         self.state_coordinator.begin_drag()
@@ -484,6 +568,8 @@ class PetWindow(QWidget):
         if self._drag_offset is None:
             return
         self.move(global_position - self._drag_offset)
+        if self.hardware_bubble.isVisible():
+            self.hardware_bubble.reposition()
         trigger = self._drag_tracker.update(global_position.x())
         if trigger is None:
             return
@@ -517,6 +603,7 @@ class PetWindow(QWidget):
         self._drag_offset = None
         self._drag_tracker.reset()
         self._save_settings()
+        self._cancel_hardware_diagnostic()
         if not self.state_coordinator.begin_exit():
             self._allow_close = True
             self.close()
@@ -526,9 +613,12 @@ class PetWindow(QWidget):
         self._interaction_enabled = False
         self._ambient_timer.stop()
         self._save_settings()
+        self._cancel_hardware_diagnostic()
         if self.foreground_monitor is not None:
             self.foreground_monitor.stop()
         self.controller.stop()
+        if self.hardware_monitor_service is not None:
+            self.hardware_monitor_service.shutdown()
         self.close()
         application = QApplication.instance()
         if application is not None:
@@ -543,6 +633,9 @@ class PetWindow(QWidget):
             self._save_settings()
             if self.foreground_monitor is not None:
                 self.foreground_monitor.stop()
+            self._cancel_hardware_diagnostic()
+            if self.hardware_monitor_service is not None:
+                self.hardware_monitor_service.shutdown()
             self.controller.stop()
             event.accept()
             return

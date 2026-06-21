@@ -12,6 +12,8 @@ class RestoredSettings:
     scale: float
     looping_state: str
     foreground_follow_enabled: bool
+    diagnostic_bubble_timeout_ms: int
+    libre_hardware_monitor_url: str
 
 
 class PetSettings:
@@ -41,11 +43,26 @@ class PetSettings:
         follow_enabled = self._as_bool(
             self.backend.value("foreground_follow_enabled"), True
         )
+        bubble_timeout_ms = self._as_int(
+            self.backend.value("diagnostic_bubble_timeout_ms"),
+            12_000,
+        )
+        bubble_timeout_ms = min(60_000, max(3_000, bubble_timeout_ms))
+        libre_url = str(
+            self.backend.value(
+                "libre_hardware_monitor_url",
+                "http://127.0.0.1:8085/data.json",
+            )
+        ).strip()
+        if not libre_url:
+            libre_url = "http://127.0.0.1:8085/data.json"
         return RestoredSettings(
             position=position,
             scale=scale,
             looping_state=state,
             foreground_follow_enabled=follow_enabled,
+            diagnostic_bubble_timeout_ms=bubble_timeout_ms,
+            libre_hardware_monitor_url=libre_url,
         )
 
     def save_position(self, position: QPoint) -> None:
@@ -63,6 +80,14 @@ class PetSettings:
 
     def save_foreground_follow_enabled(self, enabled: bool) -> None:
         self.backend.setValue("foreground_follow_enabled", enabled)
+        self.backend.sync()
+
+    def save_diagnostic_bubble_timeout_ms(self, timeout_ms: int) -> None:
+        self.backend.setValue("diagnostic_bubble_timeout_ms", timeout_ms)
+        self.backend.sync()
+
+    def save_libre_hardware_monitor_url(self, url: str) -> None:
+        self.backend.setValue("libre_hardware_monitor_url", url)
         self.backend.sync()
 
     @staticmethod
