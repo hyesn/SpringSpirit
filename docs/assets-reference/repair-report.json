@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "source_preserved": "F:\\Code\\petspring\\spring-run\\repair-backup-20260619\\decoded-original",
+  "cleaned_strips": "F:\\Code\\petspring\\spring-run\\decoded-clean",
+  "frames": "F:\\Code\\petspring\\spring-run\\frames-repaired",
+  "chroma_cleanup": {
+    "auto_key": "border",
+    "soft_matte": true,
+    "transparent_threshold": 12,
+    "opaque_threshold": 220,
+    "despill": true,
+    "edge_contract": 1,
+    "post_resize_despill": true,
+    "greenish_pixels_after": 0,
+    "transparent_rgb_residue_pixels": 0
+  },
+  "running_left": {
+    "derived_from": "running-right",
+    "transform": "framewise-horizontal-mirror-preserving-order",
+    "exact_source_strip_mirror": true
+  },
+  "jumping": {
+    "method": "stable-slots",
+    "frame_top_positions": [62, 31, 6, 25, 62],
+    "frame_bottom_positions": [202, 190, 163, 181, 202]
+  },
+  "timing": {
+    "app_durations": "Codex official fixed row durations",
+    "strategy": "Stable shared coordinate extraction and existing key-pose holds; no global Codex timing override"
+  }
+}

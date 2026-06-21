@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Test and render scratch data
+.test-tmp-*/
+.render-*.ini
+.render-*.png
+
+# Build and release outputs
+build/
+dist/
+release/
+
+# Source image extraction and cleanup workspaces
+decoded/
+decoded-clean/
+
+# Local agent/editor metadata
+.agents/
+.codex/
+.idea/
+.vscode/
+
+# OS metadata
+Thumbs.db
+Desktop.ini
+.DS_Store
