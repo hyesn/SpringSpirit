@@ -3,9 +3,10 @@ from __future__ import annotations
 import sys
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from .asset_loader import AssetValidationError, load_animation_manifest
+from .asset_loader import AssetValidationError, load_animation_manifest, resource_path
 from .foreground_monitor import ForegroundMonitor
 from .foreground_rules import ForegroundRuleError, ForegroundRuleStore
 from .pet_window import PetWindow
@@ -19,6 +20,7 @@ def create_application(argv: list[str] | None = None) -> QApplication:
     app = QApplication(argv if argv is not None else sys.argv)
     app.setApplicationName("Spring")
     app.setOrganizationName("SpringPet")
+    app.setWindowIcon(QIcon(str(resource_path("icon/pig.ico"))))
     app.setQuitOnLastWindowClosed(True)
     return app
 

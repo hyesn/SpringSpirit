@@ -4,6 +4,8 @@ An environment-aware desktop companion for Windows.
 
 Spring Spirit models desktop animation as an event-driven state orchestration problem. Native Win32 foreground hooks are resolved into process-level context, stabilized through debouncing and reconciliation, then routed through a deterministic priority system spanning persistent states, transient actions, drag feedback, startup sequences, and shutdown choreography.
 
+[Download the latest Windows build](https://github.com/hyesn/SpringSpirit/releases/latest)
+
 ## Engineering
 
 - Native `SetWinEventHook` integration with resilient process resolution

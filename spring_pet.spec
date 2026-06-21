@@ -13,7 +13,11 @@ a = Analysis(
         (
             str(project_root / "assets"),
             "assets",
-        )
+        ),
+        (
+            str(project_root / "icon"),
+            "icon",
+        ),
     ],
     hiddenimports=[],
     hookspath=[],
@@ -39,6 +43,7 @@ exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
+    icon=str(project_root / "icon" / "pig.ico"),
     codesign_identity=None,
     entitlements_file=None,
 )
