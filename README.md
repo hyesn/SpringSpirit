@@ -1,26 +1,21 @@
 # Spring Spirit
 
-An environment-aware desktop companion for Windows.
+An environment-aware desktop entity for Windows.
 
-Spring Spirit models desktop animation as an event-driven state orchestration problem. Native Win32 foreground hooks are resolved into process-level context, stabilized through debouncing and reconciliation, then routed through a deterministic priority system spanning persistent states, transient actions, drag feedback, startup sequences, and shutdown choreography.
+Spring Spirit treats a desktop character as a real-time systems problem rather than a sprite player. Native foreground events, process context, user interaction, lifecycle signals, and heterogeneous hardware telemetry are fused into a deterministic state-arbitration engine that drives responsive animation without blocking the UI thread.
+
+## Architecture
+
+- **Context sensing** — Win32 event hooks with debounced process resolution and reconciliation
+- **State arbitration** — deterministic coordination of persistent, transient, diagnostic, drag, startup, and shutdown states
+- **Hardware introspection** — asynchronous CPU/GPU, memory, power, thermal, audio, display, and network telemetry
+- **Declarative motion** — validated manifest topology with extensible roles, triggers, transitions, and persistence
+- **Precision rendering** — DPI-aware RGBA composition with per-frame alpha hit testing and stable character geometry
+- **Fault tolerance** — optional sensor backends, last-known-good configuration recovery, and graceful capability degradation
+
+`Python · PySide6 · Win32 API · Core Audio · NVIDIA SMI · LibreHardwareMonitor · PyInstaller`
 
 [Download the latest Windows build](https://github.com/hyesn/SpringSpirit/releases/latest)
-
-## Engineering
-
-- Native `SetWinEventHook` integration with resilient process resolution
-- Deterministic arbitration of asynchronous animation states
-- Declarative animation topology driven by validated manifests
-- DPI-aware RGBA rendering with per-frame alpha hit testing
-- Hot-reloadable application rules with last-known-good recovery
-- On-demand hardware telemetry with asynchronous, non-blocking diagnostics
-- Multi-monitor persistence, session handling, and self-healing autostart
-
-The renderer preserves full transparent canvases and character anchors; production frames are never cropped, recentered, re-keyed, or converted to GIF.
-
-## Stack
-
-`Python · PySide6 · Win32 API · PyInstaller · pytest`
 
 ## Build
 
@@ -30,21 +25,6 @@ pytest
 pyinstaller --noconfirm --clean spring_pet.spec
 ```
 
-Application-aware behavior is configured at:
-
-```text
-%APPDATA%\SpringPet\foreground_rules.json
-```
-
-## Hardware Diagnostics
-
-The **Hardware Awareness** menu exposes two on-demand snapshots:
-
-- **System Overview** — CPU/GPU load, memory, battery, audio, brightness, and network activity
-- **Hardware Vitals** — CPU/GPU temperature, fan telemetry, and GPU board power when available
-
-General metrics use Windows interfaces and `psutil`; NVIDIA telemetry uses `nvidia-smi`.
-CPU temperature and motherboard fan sensors are optional: run the
+Optional thermal and fan telemetry is discovered through a local
 [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)
-web server on `127.0.0.1:8085` to expose compatible sensors. Missing sensors are
-reported as unavailable—Spring Spirit never invents zero readings or installs hardware drivers.
+endpoint. Unsupported sensors remain explicitly unavailable; no kernel driver is installed and no synthetic readings are produced.
