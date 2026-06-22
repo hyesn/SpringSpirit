@@ -25,6 +25,7 @@ from .foreground_rules import ForegroundRuleError, ForegroundRuleStore
 from .hardware_bubble import HardwareStatusBubble
 from .hardware_monitor import HardwareMonitorService, HardwareSnapshot
 from .interaction import DragDirectionTracker
+from .recipe_menu import RecipeMenu
 from .settings import PetSettings
 from .state_coordinator import StateCoordinator
 
@@ -278,18 +279,22 @@ class PetWindow(QWidget):
         self.settings.save_position(self.pos())
 
     def build_context_menu(self) -> QMenu:
-        menu = QMenu(self)
+        menu = RecipeMenu(parent=self)
         menu._spring_submenus = []
         menu._spring_action_groups = []
         for group_name in ("状态", "动作"):
             states = self.manifest.menu_states(group_name)
             if not states:
                 continue
-            submenu = QMenu(group_name, menu)
-            menu.addMenu(submenu)
+            submenu = RecipeMenu(group_name, menu)
+            submenu_action = menu.addMenu(submenu)
             menu._spring_submenus.append(submenu)
+            submenu_action.setObjectName(
+                "menu_states" if group_name == "状态" else "menu_actions"
+            )
             for state in states:
                 action = QAction(state.label, submenu)
+                action.setObjectName(f"state_{state.name}")
                 action.setData(state.name)
                 action.setCheckable(state.role == "persistent")
                 action.setChecked(
@@ -303,14 +308,16 @@ class PetWindow(QWidget):
                 )
                 submenu.addAction(action)
 
-        scale_menu = QMenu("缩放", menu)
-        menu.addMenu(scale_menu)
+        scale_menu = RecipeMenu("缩放", menu)
+        scale_action = menu.addMenu(scale_menu)
         menu._spring_submenus.append(scale_menu)
+        scale_action.setObjectName("menu_scale")
         scale_group = QActionGroup(scale_menu)
         scale_group.setExclusive(True)
         menu._spring_action_groups.append(scale_group)
         for preset in self.SCALE_PRESETS:
             action = QAction(f"{round(preset * 100)}%", scale_menu)
+            action.setObjectName(f"scale_{round(preset * 100)}")
             action.setCheckable(True)
             action.setData(preset)
             action.setChecked(abs(self.scale - preset) < 0.001)
@@ -320,13 +327,70 @@ class PetWindow(QWidget):
             scale_group.addAction(action)
             scale_menu.addAction(action)
 
-        menu.addSeparator()
+        hardware_menu = RecipeMenu("电脑感知", menu)
+        hardware_action = menu.addMenu(hardware_menu)
+        menu._spring_submenus.append(hardware_menu)
+        hardware_action.setObjectName("menu_computer_awareness")
+        hardware_available = self.hardware_monitor_service is not None
+        hardware_busy = (
+            self.hardware_monitor_service.busy
+            if self.hardware_monitor_service is not None
+            else False
+        )
+        overview_action = hardware_menu.addAction("系统概览")
+        overview_action.setObjectName("computer_overview")
+        overview_action.setEnabled(hardware_available and not hardware_busy)
+        overview_action.triggered.connect(
+            lambda: self.request_hardware_diagnostic("overview")
+        )
+        vitals_action = hardware_menu.addAction("硬件体征")
+        vitals_action.setObjectName("computer_vitals")
+        vitals_action.setEnabled(hardware_available and not hardware_busy)
+        vitals_action.triggered.connect(
+            lambda: self.request_hardware_diagnostic("vitals")
+        )
+        if not hardware_available:
+            hardware_menu.setToolTip("硬件监控服务不可用")
+
+        foreground_menu = RecipeMenu("应用跟随", menu)
+        follow_action = menu.addMenu(foreground_menu)
+        menu._spring_submenus.append(foreground_menu)
+        follow_action.setObjectName("menu_foreground_follow")
+        follow_action.setChecked(self._foreground_follow_enabled)
+        follow_available = (
+            self.foreground_rules is not None
+            and self.foreground_monitor is not None
+            and self.foreground_monitor.available
+        )
+        RecipeMenu.make_toggle_submenu_action(
+            follow_action,
+            available=follow_available,
+        )
+        if not follow_available:
+            follow_action.setToolTip("仅 Windows 系统支持前台应用联动")
+        follow_action.toggled.connect(self._set_foreground_follow_enabled)
+
+        status_action = foreground_menu.addAction(self._foreground_status_text())
+        status_action.setObjectName("foreground_current")
+        status_action.setEnabled(False)
+
+        edit_rules_action = foreground_menu.addAction("编辑规则")
+        edit_rules_action.setObjectName("foreground_edit_rules")
+        edit_rules_action.setEnabled(self.foreground_rules is not None)
+        edit_rules_action.triggered.connect(self._edit_foreground_rules)
+
+        reload_rules_action = foreground_menu.addAction("重载规则")
+        reload_rules_action.setObjectName("foreground_reload_rules")
+        reload_rules_action.setEnabled(self.foreground_rules is not None)
+        reload_rules_action.triggered.connect(self._reload_foreground_rules)
+
         try:
             status = self.autostart.status()
         except AutostartError as exc:
             self._autostart_error = str(exc)
             status = None
         autostart_action = menu.addAction("开机自启动")
+        autostart_action.setObjectName("menu_autostart")
         autostart_action.setCheckable(True)
         autostart_action.setChecked(status.enabled if status else False)
         autostart_action.setEnabled(status.available if status else False)
@@ -338,55 +402,8 @@ class PetWindow(QWidget):
             autostart_action.setToolTip(self._autostart_error)
         autostart_action.toggled.connect(self._set_autostart)
 
-        menu.addSeparator()
-        hardware_menu = QMenu("硬件状态感知", menu)
-        menu.addMenu(hardware_menu)
-        menu._spring_submenus.append(hardware_menu)
-        hardware_available = self.hardware_monitor_service is not None
-        hardware_busy = (
-            self.hardware_monitor_service.busy
-            if self.hardware_monitor_service is not None
-            else False
-        )
-        overview_action = hardware_menu.addAction("系统概览")
-        overview_action.setEnabled(hardware_available and not hardware_busy)
-        overview_action.triggered.connect(
-            lambda: self.request_hardware_diagnostic("overview")
-        )
-        vitals_action = hardware_menu.addAction("硬件体征")
-        vitals_action.setEnabled(hardware_available and not hardware_busy)
-        vitals_action.triggered.connect(
-            lambda: self.request_hardware_diagnostic("vitals")
-        )
-        if not hardware_available:
-            hardware_menu.setToolTip("硬件监控服务不可用")
-
-        menu.addSeparator()
-        follow_action = menu.addAction("跟随前台应用")
-        follow_action.setCheckable(True)
-        follow_action.setChecked(self._foreground_follow_enabled)
-        follow_action.setEnabled(
-            self.foreground_rules is not None
-            and self.foreground_monitor is not None
-            and self.foreground_monitor.available
-        )
-        if not follow_action.isEnabled():
-            follow_action.setToolTip("仅 Windows 系统支持前台应用联动")
-        follow_action.toggled.connect(self._set_foreground_follow_enabled)
-
-        status_action = menu.addAction(self._foreground_status_text())
-        status_action.setEnabled(False)
-
-        edit_rules_action = menu.addAction("编辑应用规则")
-        edit_rules_action.setEnabled(self.foreground_rules is not None)
-        edit_rules_action.triggered.connect(self._edit_foreground_rules)
-
-        reload_rules_action = menu.addAction("重新加载应用规则")
-        reload_rules_action.setEnabled(self.foreground_rules is not None)
-        reload_rules_action.triggered.connect(self._reload_foreground_rules)
-
-        menu.addSeparator()
         exit_action = menu.addAction("退出")
+        exit_action.setObjectName("menu_exit")
         exit_action.triggered.connect(self.request_exit)
         return menu
 

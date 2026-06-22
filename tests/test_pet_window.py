@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication
 from spring_pet.asset_loader import load_animation_manifest
 from spring_pet.autostart import AutostartManager
 from spring_pet.pet_window import PetWindow
+from spring_pet.recipe_menu import RecipeMenu
 from spring_pet.settings import PetSettings
 
 
@@ -36,14 +37,29 @@ def test_menu_hides_system_states_and_groups_user_states(tmp_path) -> None:
     window = _window(tmp_path)
     menu = window.build_context_menu()
     texts = [action.text() for action in menu.actions()]
-    assert texts[:6] == ["状态", "动作", "缩放", "", "开机自启动", ""]
-    assert "跟随前台应用" in texts
-    assert "编辑应用规则" in texts
-    assert "重新加载应用规则" in texts
-    assert texts[-1] == "退出"
+    assert isinstance(menu, RecipeMenu)
+    assert texts == [
+        "状态",
+        "动作",
+        "缩放",
+        "电脑感知",
+        "应用跟随",
+        "开机自启动",
+        "退出",
+    ]
 
-    state_menu = menu.actions()[0].menu()
-    action_menu = menu.actions()[1].menu()
+    actions = {action.objectName(): action for action in menu.actions()}
+    assert set(actions) == {
+        "menu_states",
+        "menu_actions",
+        "menu_scale",
+        "menu_computer_awareness",
+        "menu_foreground_follow",
+        "menu_autostart",
+        "menu_exit",
+    }
+    state_menu = actions["menu_states"].menu()
+    action_menu = actions["menu_actions"].menu()
     assert [action.text() for action in state_menu.actions()] == [
         "待机",
         "喝奶茶",
@@ -60,7 +76,13 @@ def test_menu_hides_system_states_and_groups_user_states(tmp_path) -> None:
     assert "向左跑" not in repr(texts)
     assert "向右跑" not in repr(texts)
     assert "挥手" not in repr(texts)
-    assert not menu.actions()[4].isEnabled()
+    foreground_menu = actions["menu_foreground_follow"].menu()
+    assert [action.text() for action in foreground_menu.actions()] == [
+        "当前应用：尚未识别",
+        "编辑规则",
+        "重载规则",
+    ]
+    assert not actions["menu_autostart"].isEnabled()
     window.force_exit_for_session_end()
 
 
@@ -108,7 +130,12 @@ def test_scale_presets_and_wheel_range_are_declared(tmp_path) -> None:
     window.set_scale(2.0)
     assert window.scale == 2.0
     menu = window.build_context_menu()
-    scale_menu = menu.actions()[2].menu()
+    scale_action = next(
+        action
+        for action in menu.actions()
+        if action.objectName() == "menu_scale"
+    )
+    scale_menu = scale_action.menu()
     checked = [action.text() for action in scale_menu.actions() if action.isChecked()]
     assert checked == ["200%"]
     window.force_exit_for_session_end()

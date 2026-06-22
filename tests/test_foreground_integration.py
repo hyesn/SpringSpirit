@@ -113,3 +113,23 @@ def test_action_and_drag_restore_latest_foreground_base(tmp_path) -> None:
     assert window.controller.state_name == "waiting"
     window.force_exit_for_session_end()
 
+
+def test_foreground_menu_text_toggle_and_submenu_content(tmp_path) -> None:
+    window, _monitor = _window(tmp_path)
+    menu = window.build_context_menu()
+    follow_action = next(
+        action
+        for action in menu.actions()
+        if action.objectName() == "menu_foreground_follow"
+    )
+
+    assert follow_action.isChecked()
+    assert menu.activate_text_action(follow_action)
+    assert not follow_action.isChecked()
+    assert not window._foreground_follow_enabled
+    assert [action.text() for action in follow_action.menu().actions()] == [
+        "当前应用：尚未识别",
+        "编辑规则",
+        "重载规则",
+    ]
+    window.force_exit_for_session_end()

@@ -63,7 +63,9 @@ def test_hardware_menu_and_overview_animation(tmp_path) -> None:
     window, service = _window(tmp_path)
     menu = window.build_context_menu()
     hardware_action = next(
-        action for action in menu.actions() if action.text() == "硬件状态感知"
+        action
+        for action in menu.actions()
+        if action.objectName() == "menu_computer_awareness"
     )
     assert [action.text() for action in hardware_action.menu().actions()] == [
         "系统概览",
@@ -80,7 +82,7 @@ def test_hardware_menu_and_overview_animation(tmp_path) -> None:
     busy_hardware = next(
         action
         for action in busy_menu.actions()
-        if action.text() == "硬件状态感知"
+        if action.objectName() == "menu_computer_awareness"
     ).menu()
     assert not any(action.isEnabled() for action in busy_hardware.actions())
     window.force_exit_for_session_end()
