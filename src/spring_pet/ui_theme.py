@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+CREAM_PAPER = "#FFF8EB"
+PAPER_LIGHT = "#FFFDF7"
+SOFT_PINK = "#F8D9E5"
+PETAL_BLUSH = "#FDECF2"
+PETAL_BLUSH_DEEP = "#F4C2D7"
+LABEL_PINK = "#E6538D"
+LABEL_PINK_DARK = "#B74B73"
+COCOA_TEXT = "#4B342F"
+COCOA_DEEP = "#7C294C"
+MUTED_COCOA = "#B49D96"
+PINK_BORDER = "#E9B0C4"
+HAIRLINE_PINK = "#F1CEDA"
+INPUT_PAPER = "#FFFCF4"
+SHADOW_COCOA = "rgba(92, 54, 48, 38)"
+
+CARD_RADIUS = 12
+BUBBLE_RADIUS = 18
+BUTTON_RADIUS = 9
+
+SEVERITY_COLORS = {
+    "normal": "#6DBD8C",
+    "busy": "#D9B858",
+    "warning": "#D98A59",
+    "critical": "#DF6B78",
+    "unavailable": "#A89B9A",
+}

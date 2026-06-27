@@ -82,12 +82,12 @@ def test_manual_state_holds_until_different_configured_process(tmp_path) -> None
     monitor.process_changed.emit("Code.exe")
     assert window.controller.state_name == "running"
 
-    window.set_animation_state("sleeping")
+    window.set_animation_state("waiting")
     monitor.process_changed.emit("CODE.EXE")
-    assert window.controller.state_name == "sleeping"
+    assert window.controller.state_name == "waiting"
 
     monitor.process_changed.emit("unconfigured.exe")
-    assert window.controller.state_name == "sleeping"
+    assert window.controller.state_name == "waiting"
 
     monitor.process_changed.emit("msedge.exe")
     assert window.controller.state_name == "noting"
@@ -124,9 +124,19 @@ def test_foreground_menu_text_toggle_and_submenu_content(tmp_path) -> None:
     )
 
     assert follow_action.isChecked()
+    checked_size = menu.sizeHint()
+    checked_geometry = menu.actionGeometry(follow_action)
     assert menu.activate_text_action(follow_action)
     assert not follow_action.isChecked()
     assert not window._foreground_follow_enabled
+    rebuilt = window.build_context_menu()
+    rebuilt_follow = next(
+        action
+        for action in rebuilt.actions()
+        if action.objectName() == "menu_foreground_follow"
+    )
+    assert rebuilt.sizeHint() == checked_size
+    assert rebuilt.actionGeometry(rebuilt_follow) == checked_geometry
     assert [action.text() for action in follow_action.menu().actions()] == [
         "当前应用：尚未识别",
         "编辑规则",

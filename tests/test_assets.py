@@ -58,19 +58,32 @@ def test_manifest_validates_all_production_frames() -> None:
         "waiting",
         "running",
         "review",
-        "sleeping",
         "listening",
         "noting",
     ]
-    assert [state.name for state in manifest.menu_states("动作")] == [
-        "jumping",
-        "failed",
-    ]
+    assert manifest.states["idle"].label == "待机中"
+    assert manifest.states["sleeping"].menu_group is None
+    assert not manifest.states["sleeping"].is_persistent
+    assert manifest.menu_states("动作") == ()
     for state in manifest.states.values():
         for frame_path in state.frame_paths:
             with Image.open(frame_path) as image:
                 assert image.size == (384, 416)
                 assert image.mode == "RGBA"
+
+
+def test_broadcast_bubbles_are_transparent_pngs() -> None:
+    expected = {
+        "focusend.png",
+        "relaxend.png",
+        "violate.png",
+    }
+    paths = sorted((ROOT / "broadcast").glob("*.png"))
+    assert {path.name for path in paths} == expected
+    for path in paths:
+        with Image.open(path) as image:
+            assert image.mode == "RGBA"
+            assert image.getchannel("A").getbbox() is not None
 
 
 def test_new_state_frames_are_clean_and_complete() -> None:
@@ -218,22 +231,22 @@ def test_all_action_frames_match_approved_character_core_geometry() -> None:
             assert abs(detailed_core[2] - source_core[2] * 2) <= 1
 
 
-def test_new_menu_action_is_discovered_from_manifest(tmp_path) -> None:
+def test_new_menu_state_is_discovered_from_manifest(tmp_path) -> None:
     assets = tmp_path / "assets"
     assets.mkdir()
     source_manifest = ROOT / "assets" / "animation_manifest.json"
     data = json.loads(source_manifest.read_text(encoding="utf-8"))
-    data["states"]["celebrate"] = {
-        "label": "庆祝",
+    data["states"]["reading"] = {
+        "label": "读书中",
         "frames": 1,
         "durations_ms": [500],
-        "behavior": "once",
-        "role": "action",
-        "menu_group": "动作",
-        "persist": False,
-        "return_to": "idle",
+        "behavior": "loop",
+        "role": "persistent",
+        "menu_group": "状态",
+        "persist": True,
+        "return_to": None,
         "trigger": None,
-        "menu_order": 15,
+        "menu_order": 65,
     }
     (assets / "animation_manifest.json").write_text(
         json.dumps(data, ensure_ascii=False),
@@ -247,15 +260,19 @@ def test_new_menu_action_is_discovered_from_manifest(tmp_path) -> None:
         state_dir.mkdir(parents=True)
         source_state = (
             source_frames / "idle"
-            if state_name == "celebrate"
+            if state_name == "reading"
             else source_frames / state_name
         )
         for index in range(config["frames"]):
             shutil.copy2(source_state / f"{index:02}.png", state_dir)
 
     manifest = load_animation_manifest(assets / "animation_manifest.json")
-    assert [state.name for state in manifest.menu_states("动作")] == [
-        "jumping",
-        "celebrate",
-        "failed",
+    assert [state.name for state in manifest.menu_states("状态")] == [
+        "idle",
+        "waiting",
+        "running",
+        "review",
+        "listening",
+        "reading",
+        "noting",
     ]

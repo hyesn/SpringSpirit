@@ -48,6 +48,33 @@ class StateCoordinator:
             self.mode = "action"
             self.controller.set_state(state_name)
 
+    def play_scheduled_action(self, state_name: str) -> bool:
+        state = self.manifest.states.get(state_name)
+        if state is None or state.role != "action":
+            return False
+        if self.mode is not None:
+            return False
+        self.mode = "scheduled-action"
+        self.controller.set_state(state_name)
+        return True
+
+    def enter_sleep(self, state_name: str) -> bool:
+        state = self.manifest.states.get(state_name)
+        if state is None or not state.is_looping:
+            return False
+        if self.mode is not None:
+            return False
+        self.mode = "sleep"
+        self.controller.set_state(state_name)
+        return True
+
+    def wake_from_sleep(self) -> bool:
+        if self.mode != "sleep":
+            return False
+        self.mode = None
+        self.controller.set_state(self.base_state)
+        return True
+
     def apply_foreground_state(
         self,
         process_name: str,
@@ -134,7 +161,13 @@ class StateCoordinator:
             return None
 
         completed_mode = self.mode
-        if completed_mode in {"startup", "ambient", "action", "diagnostic"}:
+        if completed_mode in {
+            "startup",
+            "ambient",
+            "action",
+            "scheduled-action",
+            "diagnostic",
+        }:
             self.mode = None
             self._diagnostic_state = None
             self.controller.set_state(self.base_state)

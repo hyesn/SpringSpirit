@@ -1,17 +1,17 @@
 # Spring Spirit
 
-An environment-aware desktop entity for Windows.
+An environment-aware desktop spirit for Windows.
 
-Spring Spirit treats a desktop character as a real-time systems problem rather than a sprite player. Native foreground events, process context, user interaction, lifecycle signals, and heterogeneous hardware telemetry are fused into a deterministic state-arbitration engine that drives responsive animation without blocking the UI thread.
+Spring Spirit is built less like a toy widget and more like a compact real-time interaction system: foreground-process sensing, discipline cycles, edge-aware placement, hardware telemetry, and declarative animation states are coordinated through one deterministic state engine.
 
-## Architecture
+## Highlights
 
-- **Context sensing** — Win32 event hooks with debounced process resolution and reconciliation
-- **State arbitration** — deterministic coordination of persistent, transient, diagnostic, drag, startup, and shutdown states
-- **Hardware introspection** — asynchronous CPU/GPU, memory, power, thermal, audio, display, and network telemetry
-- **Declarative motion** — validated manifest topology with extensible roles, triggers, transitions, and persistence
-- **Precision rendering** — DPI-aware RGBA composition with per-frame alpha hit testing and stable character geometry
-- **Fault tolerance** — optional sensor backends, last-known-good configuration recovery, and graceful capability degradation
+- Win32 foreground hooks with debounce and reconciliation
+- Manifest-driven animation roles, triggers, transitions, and persistence
+- Focus/relax discipline flow with local visual feedback
+- Multi-monitor snapping, clamping, and bubble avoidance
+- Async hardware snapshots with optional LibreHardwareMonitor support
+- DPI-aware RGBA rendering with alpha hit testing
 
 `Python · PySide6 · Win32 API · Core Audio · NVIDIA SMI · LibreHardwareMonitor · PyInstaller`
 
@@ -25,6 +25,4 @@ pytest
 pyinstaller --noconfirm --clean spring_pet.spec
 ```
 
-Optional thermal and fan telemetry is discovered through a local
-[LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)
-endpoint. Unsupported sensors remain explicitly unavailable; no kernel driver is installed and no synthetic readings are produced.
+Thermal and fan data can be read from an optional local [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) endpoint. Missing sensors stay unavailable; Spring Spirit does not fake readings.

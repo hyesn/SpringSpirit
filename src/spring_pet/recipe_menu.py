@@ -1,60 +1,92 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QPointF, Qt
-from PySide6.QtGui import QAction, QColor, QMouseEvent, QPainter, QPen, QPolygonF
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt
+from PySide6.QtGui import (
+    QAction,
+    QColor,
+    QFont,
+    QFontDatabase,
+    QMouseEvent,
+    QPainter,
+    QPen,
+    QPolygonF,
+)
 from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect,
     QMenu,
     QProxyStyle,
     QStyle,
     QStyleOption,
+    QStyleOptionMenuItem,
     QWidget,
 )
 
+from . import ui_theme as theme
 
-RECIPE_MENU_STYLESHEET = """
-QMenu#recipeMenu {
-    background-color: #FFF7E8;
-    color: #4B342F;
-    border: 1px solid #E9B0C4;
-    border-left: 4px dashed #E6538D;
-    border-radius: 14px;
-    padding: 8px 6px 8px 10px;
-    font-family: "Microsoft YaHei UI", "Segoe UI";
-    font-size: 13px;
-}
-QMenu#recipeMenu::item {
-    min-width: 152px;
-    min-height: 22px;
-    padding: 7px 30px 7px 28px;
-    margin: 2px 4px;
-    border-radius: 8px;
-}
-QMenu#recipeMenu::item:selected {
-    background-color: #F8D9E5;
-    color: #7C294C;
-}
-QMenu#recipeMenu::item:disabled {
-    color: #B49D96;
-    background-color: transparent;
-}
-QMenu#recipeMenu::indicator {
-    width: 14px;
-    height: 14px;
-    left: 8px;
-    border: 1px solid #D69AAF;
-    border-radius: 7px;
-    background-color: #FFFDF7;
-}
-QMenu#recipeMenu::indicator:checked {
-    background-color: #E6538D;
-    border: 3px solid #FFF7E8;
-}
-"""
+
+def recipe_font() -> QFont:
+    installed = set(QFontDatabase.families())
+    family = next(
+        (
+            name
+            for name in (
+                "YouYuan",
+                "幼圆",
+                "华文新魏",
+                "FZShuTi",
+                "方正舒体",
+                "Microsoft YaHei UI",
+            )
+            if name in installed
+        ),
+        "Microsoft YaHei UI",
+    )
+    font = QFont(family)
+    font.setPointSizeF(10.0)
+    font.setWeight(QFont.Weight.Medium)
+    return font
 
 
 class RecipeMenuStyle(QProxyStyle):
-    """Draw a crisp submenu chevron at any Windows DPI scale."""
+    ITEM_HEIGHT = 28
+    TEXT_LEFT = 27
+    RIGHT_SPACE = 21
+    MIN_WIDTH = 116
+
+    def pixelMetric(
+        self,
+        metric: QStyle.PixelMetric,
+        option: QStyleOption | None = None,
+        widget: QWidget | None = None,
+    ) -> int:
+        if metric == QStyle.PixelMetric.PM_MenuHMargin:
+            return 7
+        if metric == QStyle.PixelMetric.PM_MenuVMargin:
+            return 4
+        if metric == QStyle.PixelMetric.PM_MenuPanelWidth:
+            return 0
+        return super().pixelMetric(metric, option, widget)
+
+    def sizeFromContents(
+        self,
+        content_type: QStyle.ContentsType,
+        option: QStyleOption,
+        size: QSize,
+        widget: QWidget | None = None,
+    ) -> QSize:
+        if (
+            content_type == QStyle.ContentsType.CT_MenuItem
+            and isinstance(option, QStyleOptionMenuItem)
+        ):
+            if option.menuItemType == QStyleOptionMenuItem.MenuItemType.Separator:
+                return QSize(8, 5)
+            text_width = option.fontMetrics.horizontalAdvance(option.text)
+            width = max(
+                self.MIN_WIDTH,
+                text_width + self.TEXT_LEFT + self.RIGHT_SPACE + 10,
+            )
+            return QSize(width, self.ITEM_HEIGHT)
+        return super().sizeFromContents(content_type, option, size, widget)
 
     def drawPrimitive(
         self,
@@ -63,39 +95,136 @@ class RecipeMenuStyle(QProxyStyle):
         painter: QPainter,
         widget: QWidget | None = None,
     ) -> None:
-        if element == QStyle.PrimitiveElement.PE_IndicatorArrowRight:
-            center = option.rect.center()
-            radius = 3.5
-            painter.save()
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        if element != QStyle.PrimitiveElement.PE_PanelMenu:
+            super().drawPrimitive(element, option, painter, widget)
+            return
+        rect = QRectF(option.rect).adjusted(0.5, 0.5, -0.5, -0.5)
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(QPen(QColor(theme.PINK_BORDER), 1.0))
+        painter.setBrush(QColor(theme.CREAM_PAPER))
+        painter.drawRoundedRect(rect, 10, 10)
+        painter.setPen(
+            QPen(
+                QColor(theme.LABEL_PINK),
+                2.5,
+                Qt.PenStyle.DashLine,
+                Qt.PenCapStyle.RoundCap,
+            )
+        )
+        painter.drawLine(
+            QPointF(rect.left() + 2.2, rect.top() + 7),
+            QPointF(rect.left() + 2.2, rect.bottom() - 7),
+        )
+        painter.restore()
+
+    def drawControl(
+        self,
+        element: QStyle.ControlElement,
+        option: QStyleOption,
+        painter: QPainter,
+        widget: QWidget | None = None,
+    ) -> None:
+        if (
+            element != QStyle.ControlElement.CE_MenuItem
+            or not isinstance(option, QStyleOptionMenuItem)
+        ):
+            super().drawControl(element, option, painter, widget)
+            return
+        if option.menuItemType == QStyleOptionMenuItem.MenuItemType.Separator:
+            return
+
+        rect = option.rect.adjusted(2, 1, -2, -1)
+        enabled = bool(option.state & QStyle.StateFlag.State_Enabled)
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        if selected:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(theme.SOFT_PINK))
+            painter.drawRoundedRect(QRectF(rect), 7, 7)
+
+        if option.checkType != QStyleOptionMenuItem.CheckType.NotCheckable:
+            self._draw_indicator(painter, rect, option.checked, enabled)
+
+        text_color = (
+            QColor(theme.MUTED_COCOA)
+            if not enabled
+            else QColor(theme.COCOA_DEEP)
+            if selected
+            else QColor(theme.COCOA_TEXT)
+        )
+        painter.setPen(text_color)
+        painter.setFont(option.font)
+        text_rect = rect.adjusted(self.TEXT_LEFT, 0, -self.RIGHT_SPACE, 0)
+        painter.drawText(
+            text_rect,
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            option.text,
+        )
+
+        if option.menuItemType == QStyleOptionMenuItem.MenuItemType.SubMenu:
+            self._draw_arrow(painter, rect, enabled)
+        painter.restore()
+
+    @staticmethod
+    def _draw_indicator(
+        painter: QPainter,
+        rect,
+        checked: bool,
+        enabled: bool,
+    ) -> None:
+        center = QPointF(rect.left() + 11.5, rect.center().y())
+        color = QColor(theme.LABEL_PINK if enabled else "#CBB7B2")
+        painter.setPen(QPen(color, 1.1))
+        painter.setBrush(color if checked else QColor(theme.PAPER_LIGHT))
+        painter.drawEllipse(center, 5.1, 5.1)
+        if checked:
             painter.setPen(
                 QPen(
-                    QColor("#B74B73"),
-                    1.6,
+                    QColor(theme.CREAM_PAPER),
+                    1.25,
                     Qt.PenStyle.SolidLine,
                     Qt.PenCapStyle.RoundCap,
                     Qt.PenJoinStyle.RoundJoin,
                 )
             )
-            painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawPolyline(
                 QPolygonF(
                     [
-                        QPointF(center.x() - radius / 2, center.y() - radius),
-                        QPointF(center.x() + radius / 2, center.y()),
-                        QPointF(center.x() - radius / 2, center.y() + radius),
+                        QPointF(center.x() - 2.4, center.y()),
+                        QPointF(center.x() - 0.5, center.y() + 2.0),
+                        QPointF(center.x() + 2.8, center.y() - 2.2),
                     ]
                 )
             )
-            painter.restore()
-            return
-        super().drawPrimitive(element, option, painter, widget)
+
+    @staticmethod
+    def _draw_arrow(painter: QPainter, rect, enabled: bool) -> None:
+        center = QPointF(rect.right() - 10.5, rect.center().y())
+        painter.setPen(
+            QPen(
+                QColor(theme.LABEL_PINK_DARK if enabled else "#CBB7B2"),
+                1.5,
+                Qt.PenStyle.SolidLine,
+                Qt.PenCapStyle.RoundCap,
+                Qt.PenJoinStyle.RoundJoin,
+            )
+        )
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPolyline(
+            QPolygonF(
+                [
+                    QPointF(center.x() - 1.7, center.y() - 3.2),
+                    QPointF(center.x() + 1.7, center.y()),
+                    QPointF(center.x() - 1.7, center.y() + 3.2),
+                ]
+            )
+        )
 
 
 class RecipeMenu(QMenu):
-    """A compact recipe-card menu with a split toggle/submenu action."""
-
-    SUBMENU_ARROW_WIDTH = 30
+    SUBMENU_ARROW_WIDTH = 23
 
     def __init__(
         self,
@@ -107,12 +236,13 @@ class RecipeMenu(QMenu):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self._recipe_style = RecipeMenuStyle()
         self.setStyle(self._recipe_style)
-        self.setStyleSheet(RECIPE_MENU_STYLESHEET)
+        self.setFont(recipe_font())
+        self.setAutoFillBackground(False)
 
         shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(24)
-        shadow.setOffset(0, 6)
-        shadow.setColor(QColor(92, 54, 48, 76))
+        shadow.setBlurRadius(16)
+        shadow.setOffset(0, 4)
+        shadow.setColor(QColor(92, 54, 48, 64))
         self.setGraphicsEffect(shadow)
 
     @staticmethod
@@ -122,7 +252,6 @@ class RecipeMenu(QMenu):
         action.setProperty("springToggleAvailable", available)
 
     def activate_text_action(self, action: QAction) -> bool:
-        """Toggle a split action as if its text area had been clicked."""
         if not action.property("springToggleSubmenu"):
             return False
         if not action.property("springToggleAvailable"):

@@ -10,6 +10,7 @@ from spring_pet.asset_loader import load_animation_manifest
 from spring_pet.autostart import AutostartManager
 from spring_pet.hardware_monitor import HardwareMetric, HardwareSnapshot
 from spring_pet.pet_window import PetWindow
+from spring_pet.recipe_menu import recipe_font
 from spring_pet.settings import PetSettings
 
 
@@ -78,6 +79,9 @@ def test_hardware_menu_and_overview_animation(tmp_path) -> None:
     assert window.controller.state_name == "inspect"
     assert window.state_coordinator.mode == "diagnostic"
     assert window.hardware_bubble.isVisible()
+    assert window.hardware_bubble.font().family() == recipe_font().family()
+    assert window.hardware_bubble.card.objectName() == "hardwareCard"
+    assert window.hardware_bubble.header_widget.isVisible()
     busy_menu = window.build_context_menu()
     busy_hardware = next(
         action
@@ -90,7 +94,7 @@ def test_hardware_menu_and_overview_animation(tmp_path) -> None:
 
 def test_snapshot_updates_bubble_and_animation_returns_to_base(tmp_path) -> None:
     window, service = _window(tmp_path)
-    window.set_animation_state("sleeping")
+    window.set_animation_state("waiting")
     window.request_hardware_diagnostic("vitals")
     snapshot = HardwareSnapshot(
         kind="vitals",
@@ -114,10 +118,12 @@ def test_snapshot_updates_bubble_and_animation_returns_to_base(tmp_path) -> None
     service.snapshot_ready.emit(snapshot)
     QApplication.processEvents()
     assert window.hardware_bubble.commentary_label.text() == "状态挺稳。"
+    assert window.hardware_bubble.card.objectName() == "hardwareCard"
+    assert window.hardware_bubble.title_label.styleSheet() == ""
 
     for _ in range(6):
         window.controller._advance()
-    assert window.controller.state_name == "sleeping"
+    assert window.controller.state_name == "waiting"
     window.force_exit_for_session_end()
 
 

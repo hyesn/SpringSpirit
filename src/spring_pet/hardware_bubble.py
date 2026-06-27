@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, Qt, QTimer
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QColor, QGuiApplication
 from PySide6.QtWidgets import (
     QFrame,
+    QGraphicsDropShadowEffect,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -12,15 +13,8 @@ from PySide6.QtWidgets import (
 )
 
 from .hardware_monitor import HardwareMetric, HardwareSnapshot
-
-
-SEVERITY_COLORS = {
-    "normal": "#65D692",
-    "busy": "#F1C75B",
-    "warning": "#F29A58",
-    "critical": "#F26D78",
-    "unavailable": "#9BA3B4",
-}
+from .recipe_menu import recipe_font
+from . import ui_theme as theme
 
 
 class HardwareStatusBubble(QWidget):
@@ -32,6 +26,7 @@ class HardwareStatusBubble(QWidget):
         super().__init__(parent, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setWindowFlag(Qt.WindowType.WindowDoesNotAcceptFocus, True)
+        self.setFont(recipe_font())
         self.setFixedWidth(330)
         self.auto_close_ms = auto_close_ms
         self._pet_window: QWidget | None = None
@@ -40,15 +35,29 @@ class HardwareStatusBubble(QWidget):
         self._timer.timeout.connect(self.hide)
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
+        root.setContentsMargins(8, 8, 8, 12)
         self.card = QFrame(self)
         self.card.setObjectName("hardwareCard")
         root.addWidget(self.card)
+
+        shadow = QGraphicsDropShadowEffect(self.card)
+        shadow.setBlurRadius(18)
+        shadow.setOffset(0, 5)
+        shadow.setColor(QColor(92, 54, 48, 58))
+        self.card.setGraphicsEffect(shadow)
+
         layout = QVBoxLayout(self.card)
-        layout.setContentsMargins(18, 14, 18, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(18, 14, 18, 17)
+        layout.setSpacing(9)
 
         header = QHBoxLayout()
+        header.setSpacing(9)
+        self.header_widget = QWidget()
+        self.header_widget.setLayout(header)
+        title_mark = QFrame(self.header_widget)
+        title_mark.setObjectName("hardwareTitleMark")
+        title_mark.setFixedSize(4, 17)
+        header.addWidget(title_mark)
         self.title_label = QLabel()
         self.title_label.setObjectName("hardwareTitle")
         header.addWidget(self.title_label, 1)
@@ -56,11 +65,12 @@ class HardwareStatusBubble(QWidget):
         close_button.setObjectName("hardwareClose")
         close_button.setFixedSize(24, 24)
         close_button.clicked.connect(self.hide)
-        header.addWidget(close_button)
-        layout.addLayout(header)
+        self.close_button = close_button
+        header.addWidget(self.close_button)
+        layout.addWidget(self.header_widget)
 
         self.metric_layout = QVBoxLayout()
-        self.metric_layout.setSpacing(5)
+        self.metric_layout.setSpacing(6)
         layout.addLayout(self.metric_layout)
         self.commentary_label = QLabel()
         self.commentary_label.setWordWrap(True)
@@ -72,64 +82,76 @@ class HardwareStatusBubble(QWidget):
         layout.addWidget(self.notes_label)
 
         self.setStyleSheet(
-            """
-            QWidget {
-                font-family: "Microsoft YaHei UI", "Segoe UI";
-            }
-            #hardwareCard {
-                background: rgba(26, 29, 38, 242);
-                border: 1px solid rgba(255, 255, 255, 42);
-                border-radius: 16px;
-            }
-            #hardwareTitle {
-                color: #FFFFFF;
-                font-size: 16px;
+            f"""
+            QWidget {{
+                color: {theme.COCOA_TEXT};
+            }}
+            #hardwareCard {{
+                background: {theme.CREAM_PAPER};
+                border: 1px solid {theme.PINK_BORDER};
+                border-radius: {theme.BUBBLE_RADIUS}px;
+            }}
+            #speechBubble {{
+                background: {theme.CREAM_PAPER};
+                border: 1px solid {theme.PINK_BORDER};
+                border-radius: {theme.BUBBLE_RADIUS}px;
+            }}
+            #hardwareTitleMark {{
+                background: {theme.LABEL_PINK};
+                border-radius: 2px;
+            }}
+            #hardwareTitle {{
+                color: {theme.COCOA_DEEP};
                 font-weight: 700;
-            }
-            #hardwareClose {
-                color: #D9DCE5;
+            }}
+            #hardwareClose {{
+                color: {theme.LABEL_PINK_DARK};
                 background: transparent;
                 border: none;
-                font-size: 18px;
-            }
-            #hardwareClose:hover {
-                color: #FFFFFF;
-                background: rgba(255, 255, 255, 24);
+            }}
+            #hardwareClose:hover {{
+                color: {theme.COCOA_DEEP};
+                background: {theme.PETAL_BLUSH};
                 border-radius: 12px;
-            }
-            #hardwareMetricLabel {
-                color: #BFC5D2;
-                font-size: 12px;
-            }
-            #hardwareMetricValue {
-                color: #FFFFFF;
-                font-size: 13px;
+            }}
+            #hardwareMetricRow {{
+                background: {theme.PAPER_LIGHT};
+                border: 1px solid {theme.HAIRLINE_PINK};
+                border-radius: 10px;
+            }}
+            #hardwareMetricLabel {{
+                color: {theme.COCOA_TEXT};
+            }}
+            #hardwareMetricValue {{
+                color: {theme.COCOA_DEEP};
                 font-weight: 600;
-            }
-            #hardwareMetricDetail {
-                color: #8F97A8;
-                font-size: 10px;
-            }
-            #hardwareCommentary {
-                color: #F4C2D7;
-                font-size: 12px;
-                padding-top: 5px;
-            }
-            #hardwareNotes {
-                color: #848C9D;
-                font-size: 10px;
-            }
+            }}
+            #hardwareMetricDetail {{
+                color: {theme.MUTED_COCOA};
+            }}
+            #hardwareCommentary {{
+                color: {theme.COCOA_TEXT};
+                background: {theme.PETAL_BLUSH};
+                border: 1px solid {theme.HAIRLINE_PINK};
+                border-radius: 10px;
+                padding: 7px 9px;
+            }}
+            #hardwareNotes {{
+                color: {theme.MUTED_COCOA};
+            }}
             """
         )
 
     def show_loading(self, title: str, pet_window: QWidget) -> None:
         self._pet_window = pet_window
         self._timer.stop()
+        self.setFixedWidth(330)
+        self.card.setObjectName("hardwareCard")
+        self._refresh_card_style()
+        self.header_widget.show()
         self.title_label.setText(title)
         self._clear_metrics()
-        loading = QLabel("正在检查…")
-        loading.setObjectName("hardwareMetricLabel")
-        self.metric_layout.addWidget(loading)
+        self._add_plain_row("正在检查…")
         self.commentary_label.setText("别催，我正在让它把体检报告交出来。")
         self.notes_label.clear()
         self.adjustSize()
@@ -143,15 +165,17 @@ class HardwareStatusBubble(QWidget):
         pet_window: QWidget,
     ) -> None:
         self._pet_window = pet_window
+        self.setFixedWidth(330)
+        self.card.setObjectName("hardwareCard")
+        self._refresh_card_style()
+        self.header_widget.show()
         self.title_label.setText(title)
         self._clear_metrics()
         for metric in snapshot.metrics:
             if metric.available:
                 self._add_metric(metric)
         if not snapshot.metrics:
-            unavailable = QLabel("No readable metrics")
-            unavailable.setObjectName("hardwareMetricLabel")
-            self.metric_layout.addWidget(unavailable)
+            self._add_plain_row("暂无可读取指标")
         self.commentary_label.setText(snapshot.commentary)
         notes = " · ".join(snapshot.unavailable_reasons[:3])
         self.notes_label.setText(notes)
@@ -168,14 +192,36 @@ class HardwareStatusBubble(QWidget):
         pet_window: QWidget,
     ) -> None:
         self._pet_window = pet_window
+        self.setFixedWidth(330)
+        self.card.setObjectName("hardwareCard")
+        self._refresh_card_style()
+        self.header_widget.show()
         self.title_label.setText(title)
         self._clear_metrics()
-        error = QLabel("Hardware inspection failed")
-        error.setObjectName("hardwareMetricLabel")
-        self.metric_layout.addWidget(error)
+        self._add_plain_row("检查失败")
         self.commentary_label.setText("它拒绝配合体检。很有个性，可惜没有数据。")
         self.notes_label.setText(message)
         self.notes_label.setVisible(True)
+        self.adjustSize()
+        self.reposition()
+        self.show()
+        self._timer.start(max(1000, self.auto_close_ms))
+
+    def show_message(
+        self,
+        message: str,
+        pet_window: QWidget,
+    ) -> None:
+        self._pet_window = pet_window
+        self._timer.stop()
+        self.setFixedWidth(230)
+        self.card.setObjectName("speechBubble")
+        self._refresh_card_style()
+        self.header_widget.hide()
+        self._clear_metrics()
+        self.commentary_label.setText(message)
+        self.notes_label.clear()
+        self.notes_label.setVisible(False)
         self.adjustSize()
         self.reposition()
         self.show()
@@ -191,18 +237,24 @@ class HardwareStatusBubble(QWidget):
             return
         available = screen.availableGeometry()
         gap = 12
-        left_position = QPoint(
-            pet_rect.left() - self.width() - gap,
-            pet_rect.center().y() - self.height() // 2,
-        )
         right_position = QPoint(
             pet_rect.right() + gap,
-            pet_rect.center().y() - self.height() // 2,
+            pet_rect.top() - self.height() // 3,
+        )
+        left_position = QPoint(
+            pet_rect.left() - self.width() - gap,
+            pet_rect.top() - self.height() // 3,
+        )
+        bottom_position = QPoint(
+            pet_rect.center().x() - self.width() // 2,
+            pet_rect.bottom() + gap,
         )
         position = (
-            left_position
+            right_position
+            if right_position.x() + self.width() <= available.right() + 1
+            else left_position
             if left_position.x() >= available.left()
-            else right_position
+            else bottom_position
         )
         x = min(max(position.x(), available.left()), available.right() - self.width() + 1)
         y = min(max(position.y(), available.top()), available.bottom() - self.height() + 1)
@@ -213,8 +265,13 @@ class HardwareStatusBubble(QWidget):
         super().hideEvent(event)
 
     def _add_metric(self, metric: HardwareMetric) -> None:
-        row = QHBoxLayout()
+        row_frame = QFrame(self.card)
+        row_frame.setObjectName("hardwareMetricRow")
+        row = QHBoxLayout(row_frame)
+        row.setContentsMargins(10, 7, 10, 7)
+        row.setSpacing(9)
         labels = QVBoxLayout()
+        labels.setSpacing(1)
         label = QLabel(metric.label)
         label.setObjectName("hardwareMetricLabel")
         labels.addWidget(label)
@@ -225,10 +282,20 @@ class HardwareStatusBubble(QWidget):
         row.addLayout(labels, 1)
         value = QLabel(metric.display_value)
         value.setObjectName("hardwareMetricValue")
-        color = SEVERITY_COLORS.get(metric.severity, "#FFFFFF")
+        color = theme.SEVERITY_COLORS.get(metric.severity, theme.COCOA_DEEP)
         value.setStyleSheet(f"color: {color};")
         row.addWidget(value)
-        self.metric_layout.addLayout(row)
+        self.metric_layout.addWidget(row_frame)
+
+    def _add_plain_row(self, text: str) -> None:
+        row_frame = QFrame(self.card)
+        row_frame.setObjectName("hardwareMetricRow")
+        row = QHBoxLayout(row_frame)
+        row.setContentsMargins(10, 7, 10, 7)
+        label = QLabel(text)
+        label.setObjectName("hardwareMetricLabel")
+        row.addWidget(label)
+        self.metric_layout.addWidget(row_frame)
 
     def _clear_metrics(self) -> None:
         while self.metric_layout.count():
@@ -247,3 +314,7 @@ class HardwareStatusBubble(QWidget):
                 item.widget().deleteLater()
             if item.layout() is not None:
                 self._delete_layout(item.layout())
+
+    def _refresh_card_style(self) -> None:
+        self.card.style().unpolish(self.card)
+        self.card.style().polish(self.card)

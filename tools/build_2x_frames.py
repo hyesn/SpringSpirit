@@ -28,7 +28,7 @@ SCALE = 2
 CANVAS = (192, 208)
 OUTPUT_CANVAS = (CANVAS[0] * SCALE, CANVAS[1] * SCALE)
 CORE_PROFILES = {
-    # Lower body is the most stable identity anchor for standing states.
+    # Standing states use the lower body as their stable identity anchor.
     "idle": (0.72, 1.00),
     "waving": (0.72, 1.00),
     "waiting": (0.72, 1.00),
@@ -40,7 +40,7 @@ CORE_PROFILES = {
     "noting": (0.72, 1.00),
     "inspect": (0.70, 1.00),
     "examine": (0.70, 1.00),
-    # Mid-body anchors avoid intentional lifted legs and extended limbs.
+    # Motion states use the body core so limbs do not distort scale.
     "failed": (0.42, 0.68),
     "running-right": (0.30, 0.62),
     "jumping": (0.28, 0.62),
@@ -235,9 +235,7 @@ def build_state(
             _left, top, _right, bottom = alpha_bbox(source_frame)
             height_scales.append((bottom - top) * SCALE / sprite.height)
 
-        # One uniform scale per state preserves the same character proportions
-        # across every frame. Per-frame non-uniform fitting causes the visible
-        # "ballooning" effect when arms or props change the bounding box.
+        # Uniform state scale prevents frame-to-frame body ballooning.
         state_scale = statistics.median(height_scales)
         max_safe_scale = min(
             (OUTPUT_CANVAS[0] - 10 * SCALE) / max(sprite.width for sprite in sprites),

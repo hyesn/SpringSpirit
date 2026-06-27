@@ -246,8 +246,8 @@ def load_animation_manifest(
     )
     default_scale = data.get("default_scale")
     _require(
-        isinstance(default_scale, (int, float)) and 0.5 <= default_scale <= 2.5,
-        "default_scale 必须在 0.5 到 2.5 之间。",
+        isinstance(default_scale, (int, float)) and 0.25 <= default_scale <= 2.5,
+        "default_scale 必须在 0.25 到 2.5 之间。",
     )
 
     playback_rate = data.get("playback_rate", 1.0)
@@ -256,8 +256,6 @@ def load_animation_manifest(
         "playback_rate 必须大于 0 且不超过 4。",
     )
 
-    # Load the first frame before the window is created, as required by the
-    # asset contract.
     first_frame = QImage(str(states[default_state].frame_paths[0]))
     _require(not first_frame.isNull(), "默认状态首帧无法加载。")
 

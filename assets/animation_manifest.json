@@ -6,7 +6,7 @@
   "playback_rate": 0.6,
   "states": {
     "idle": {
-      "label": "待机",
+      "label": "待机中",
       "frames": 6,
       "durations_ms": [350, 140, 140, 180, 180, 400],
       "behavior": "loop",
@@ -59,7 +59,7 @@
       "durations_ms": [180, 180, 180, 180, 350],
       "behavior": "once",
       "role": "action",
-      "menu_group": "动作",
+      "menu_group": null,
       "persist": false,
       "return_to": "idle",
       "trigger": null,
@@ -71,7 +71,7 @@
       "durations_ms": [180, 180, 180, 180, 180, 180, 180, 300],
       "behavior": "once",
       "role": "action",
-      "menu_group": "动作",
+      "menu_group": null,
       "persist": false,
       "return_to": "idle",
       "trigger": null,
@@ -119,8 +119,8 @@
       "durations_ms": [320, 320, 380, 520, 380, 420],
       "behavior": "loop",
       "role": "persistent",
-      "menu_group": "状态",
-      "persist": true,
+      "menu_group": null,
+      "persist": false,
       "return_to": null,
       "trigger": null,
       "menu_order": 50

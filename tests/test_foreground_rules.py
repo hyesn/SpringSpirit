@@ -16,7 +16,6 @@ PERSISTENT_STATES = {
     "waiting",
     "running",
     "review",
-    "sleeping",
     "listening",
     "noting",
 }

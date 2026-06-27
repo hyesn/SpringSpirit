@@ -3,9 +3,12 @@ __pycache__/
 *.py[cod]
 *.pyo
 .pytest_cache/
+.coverage
+htmlcov/
 
 # Test and render scratch data
 .test-tmp-*/
+.tmp-pytest-*/
 .render-*.ini
 .render-*.png
 
@@ -13,6 +16,9 @@ __pycache__/
 build/
 dist/
 release/
+/_internal/
+/Spring.exe
+*.spec.bak
 
 # Source image extraction and cleanup workspaces
 decoded/
@@ -23,6 +29,7 @@ decoded-clean/
 .codex/
 .idea/
 .vscode/
+*.log
 
 # OS metadata
 Thumbs.db

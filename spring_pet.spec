@@ -18,6 +18,10 @@ a = Analysis(
             str(project_root / "icon"),
             "icon",
         ),
+        (
+            str(project_root / "broadcast"),
+            "broadcast",
+        ),
     ],
     hiddenimports=[
         "pycaw.pycaw",
